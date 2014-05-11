@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <fcntl.h>
 #include <string.h>
 
 #define NAME_START 14
