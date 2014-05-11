@@ -21,5 +21,16 @@
 			Colin
 		</row>
 	</table>
+	<table name="Projects" project="s">
+		<row>
+			Thing	
+		</row>
+		<row>
+			Project2
+		</row>
+		<row>
+			Another project
+		</row>
+	</table>
 </database>
 		

@@ -59,6 +59,30 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	for (i = 0; i < database.num_tables; i++)
+	{
+		free(database.tables[i].name);
+		int j;
+		for (j = 0; j < database.tables[i].num_fields; j++)
+		{
+			free(database.tables[i].fields[j].name);
+			free(database.tables[i].fields[j].type);
+		}
+		free(database.tables[i].fields);
+
+		for (j = 0; j < database.tables[i].num_rows; j++)
+		{
+			int k;
+			for (k = 0; k < database.tables[i].num_fields; k++)
+			{
+				free(database.tables[i].rows[j].values[k]);
+			}
+			free(database.tables[i].rows[j].values);
+		}
+		free(database.tables[i].rows);
+	}
+	free(database.tables);
+
 	return 0;
 }
 
@@ -91,7 +115,6 @@ int read_database(Database *database, const char *db_name)
 	chars_read = getline(&line, &line_size, db_file);
 	while (strcmp(line, "</database>\n") != 0)
 	{
-		printf("%s", line);
 		database->num_tables++;
 		database->tables = realloc(database->tables, database->num_tables * sizeof(Table));
 		read_table(&database->tables[database->num_tables - 1], line, db_file);
@@ -129,7 +152,6 @@ void read_table(Table *table, const char *table_def, FILE *file)
 		next_start = get_field_value(&table->fields[table->num_fields - 1].type, next_start + 1, "\"");
 	}
 
-	printf("%d\n", table->num_fields);
 	char *line = NULL;
 	size_t line_size = 0;
 	int chars_read = getline(&line, &line_size, file);
@@ -149,7 +171,6 @@ void read_table(Table *table, const char *table_def, FILE *file)
 		}
 		//get rid of the current row's closing </row>
 		chars_read = getline(&line, &line_size, file);
-		printf("%s", line);
 		//read the next line's <row> or </table>
 		chars_read = getline(&line, &line_size, file);
 	}
