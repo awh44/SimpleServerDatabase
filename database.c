@@ -73,14 +73,14 @@ int read_database(Database *database, const char *db_name)
 		printf("%s", line);
 		database->num_tables++;
 		database->tables = realloc(database->tables, database->num_tables * sizeof(Table));
-		read_table(&database->tables[database->num_tables - 1], db_file);
+		read_table(&database->tables[database->num_tables - 1], line, db_file);
 		chars_read = getline(&line, &line_size, db_file);
 	}	
 
 	fclose(db_file);
 }
 
-void read_table(Table *table, FILE *file)
+void read_table(Table *table, const char *table_def, FILE *file)
 {
 	
 }
