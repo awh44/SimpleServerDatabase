@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define NAME_START 14
-#define BUFFER_SIZE 64
+#define NUM_TABS 3 
 
 typedef struct
 {
@@ -22,6 +22,7 @@ typedef struct
 	char *name;
 	int num_fields;
 	Field *fields;
+	int num_rows;
 	Row *rows;
 } Table;
 
@@ -32,7 +33,6 @@ typedef struct
 	Table *tables;
 } Database;
 
-void read_row(Field *field, FILE *file);
 char *get_field_value(char **field, const char *start, const char *delim);
 void read_table(Table *table, const char *table_def, FILE *file);
 int read_database(Database *database, const char *db_name);
@@ -41,6 +41,23 @@ int main(int argc, char *argv[])
 {
 	Database database;
 	read_database(&database, "test_db.xml");
+
+	int i;
+	for (i = 0; i < database.num_tables; i++)
+	{
+		printf("Table: %s\n", database.tables[i].name);
+		int j;
+		for (j = 0; j < database.tables[i].num_rows; j++)
+		{
+			printf("\tRow %d:\n", j);
+			int k;
+			for (k = 0; k < database.tables[i].num_fields; k++)
+			{
+				printf("\t\t%s = %s", database.tables[i].fields[k].name, database.tables[i].rows[j].values[k]);
+				printf(" (Type %s)\n", database.tables[i].fields[k].type);
+			}
+		}
+	}
 
 	return 0;
 }
@@ -100,6 +117,7 @@ void read_table(Table *table, const char *table_def, FILE *file)
 	//initialize table
 	table->num_fields = 0;
 	table->fields = NULL;
+	table->num_rows = 0;
 	table->rows = NULL;
 
 	char *next_start = get_field_value(&table->name, &table_def[NAME_START], "\"");
@@ -108,21 +126,31 @@ void read_table(Table *table, const char *table_def, FILE *file)
 		table->num_fields++;
 		table->fields = realloc(table->fields, table->num_fields * sizeof(Field));
 		next_start = get_field_value(&table->fields[table->num_fields - 1].name, next_start + 1, "=");
-		printf("%s\n", table->fields[table->num_fields - 1].name);
 		next_start = get_field_value(&table->fields[table->num_fields - 1].type, next_start + 1, "\"");
-		printf("%s\n", table->fields[table->num_fields - 1].type);
 	}
 
+	printf("%d\n", table->num_fields);
 	char *line = NULL;
 	size_t line_size = 0;
 	int chars_read = getline(&line, &line_size, file);
 	while (strcmp(line, "\t</table>\n") != 0)
-	{
-		getline(&line, &line_size, file);
+	{	
+		table->num_rows++;
+		table->rows = realloc(table->rows, table->num_rows * sizeof(Row));
+		table->rows[table->num_rows - 1].values = malloc(table->num_fields * sizeof(char *));
+		int i;
+		for (i = 0; i < table->num_fields; i++)
+		{
+			chars_read = getline(&line, &line_size, file);
+			line += NUM_TABS;
+			table->rows[table->num_rows - 1].values[i] = (char *) malloc(strlen(line) * sizeof(char));
+			line[strlen(line) - 1] = '\0';
+			strcpy(table->rows[table->num_rows - 1].values[i], line);
+		}
+		//get rid of the current row's closing </row>
+		chars_read = getline(&line, &line_size, file);
+		printf("%s", line);
+		//read the next line's <row> or </table>
+		chars_read = getline(&line, &line_size, file);
 	}
-}
-
-void read_row(Field *field, FILE *file)
-{
-	
 }
