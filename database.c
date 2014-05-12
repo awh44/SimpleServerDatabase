@@ -32,6 +32,8 @@ typedef struct
 	Table *tables;
 } Database;
 
+void execute_statement(Database *database, const char *statement);
+void select_statement(Database *database, const char *statement);
 void free_database(Database *database);
 char *get_field_value(char **field, const char *start, const char *delim);
 void read_table(Table *table, const char *table_def, FILE *file);
@@ -42,6 +44,7 @@ int main(int argc, char *argv[])
 	Database database;
 	read_database(&database, "test_db.xml");
 
+	/*
 	int i;
 	for (i = 0; i < database.num_tables; i++)
 	{
@@ -58,10 +61,34 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	*/
+
+	char *line = NULL;
+	size_t line_size = 0;
+	int chars_read = getline(&line, &line_size, stdin);
+	execute_statement(&database, line);
 
 	free_database(&database);
 
 	return 0;
+}
+
+void execute_statement(Database *database, const char *statement)
+{
+	
+	char *type;
+	char *begin_next = get_field_value(&type, statement, " ") + 1;
+
+	if (strcmp(type, "SELECT") == 0)
+	{
+		select_statement(database, begin_next);
+	}
+}
+
+void select_statement(Database *database, const char *statement)
+{
+	char **fields;
+	char *begin_next;// = get_fields(d
 }
 
 void free_database(Database *database)
