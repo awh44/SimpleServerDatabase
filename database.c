@@ -95,7 +95,7 @@ void select_statement(Database *database, const char *statement)
 	if (begin_next == NULL)
 		return;
 	
-	printf("%s\n", begin_next);
+	printf("%s", begin_next);
 	char *from;
 	begin_next = get_field_value(&from, begin_next, " ");
 	//if (
@@ -107,7 +107,7 @@ char *read_fields(char ***fields, int *num_fields, const char *start)
 	{
 		*fields = NULL;
 		*num_fields = 0;
-		return &start[1];
+		return start + 2;
 	}
 }
 
@@ -184,7 +184,7 @@ char *get_field_value(char **field, const char *start, const char *delim)
 	int length = strlen(start);
 	*field = (char *) malloc((length + 1) * sizeof(char));
 	strcpy(*field, start);
-	*end = delim[0];
+	*end = *delim;
 	return end + 1;
 }
 
