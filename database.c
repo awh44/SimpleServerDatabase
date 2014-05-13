@@ -32,6 +32,7 @@ typedef struct
 	Table *tables;
 } Database;
 
+char *read_fields(char ***fields, int *num_fields, const char *start);
 void execute_statement(Database *database, const char *statement);
 void select_statement(Database *database, const char *statement);
 void free_database(Database *database);
@@ -77,7 +78,7 @@ void execute_statement(Database *database, const char *statement)
 {
 	
 	char *type;
-	char *begin_next = get_field_value(&type, statement, " ") + 1;
+	char *begin_next = get_field_value(&type, statement, " ");
 
 	if (strcmp(type, "SELECT") == 0)
 	{
@@ -87,8 +88,27 @@ void execute_statement(Database *database, const char *statement)
 
 void select_statement(Database *database, const char *statement)
 {
-	char **fields;
-	char *begin_next;// = get_fields(d
+	char **fields = NULL;
+	int num_fields = 0;
+	char *begin_next = read_fields(&fields, &num_fields, statement);
+	
+	if (begin_next == NULL)
+		return;
+	
+	printf("%s\n", begin_next);
+	char *from;
+	begin_next = get_field_value(&from, begin_next, " ");
+	//if (
+}
+
+char *read_fields(char ***fields, int *num_fields, const char *start)
+{
+	if (start[0] == '*')
+	{
+		*fields = NULL;
+		*num_fields = 0;
+		return &start[1];
+	}
 }
 
 void free_database(Database *database)
