@@ -136,13 +136,33 @@ char *create_return_string(Table *table)
 	for (i = 0; i < table->num_fields; i++)
 	{
 		curr_length = strlen(table->fields[i].name) + curr_length + 2;
+		//I realize this is terribly inefficient and should probably use the
+		//convention of resizing the array to twice its size to accomodate the
+		//new data, as needed; that optimization will be added later
 		return_string = (char *) realloc(return_string, curr_length * sizeof(char));
+		//just read today (though it shold probably have been obvious) on
+		//joelonsoftware on how strcat scales awfully, because of its need to 
+		//reach the end of the initial string each time; should probably
+		//improve and optimize this later as well
 		strcat(return_string, table->fields[i].name);
 		strcat(return_string, ", ");
 	}
-	printf("%d", curr_length);
-	return_string[curr_length - 3] = '\0';
-	for (i = 0; i < table->num_rows; i++);
+	//return_string now has a single extra character
+	return_string[curr_length - 3] = '\n';
+	return_string[curr_length - 2] = '\0';
+	for (i = 0; i < table->num_rows; i++)
+	{
+		int j;
+		for (j = 0; j < table->num_fields; j++)
+		{
+			curr_length = strlen(table->rows[i].values[j]) + curr_length + 2;
+			return_string = (char *) realloc(return_string, curr_length * sizeof(char));
+			strcat(return_string, table->rows[i].values[j]);
+			strcat(return_string, ", ");
+		}
+		return_string[strlen(return_string) - 2] = '\n';
+		return_string[strlen(return_string) - 1] = '\0';
+	}
 	return return_string;
 }
 
