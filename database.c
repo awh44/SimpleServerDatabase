@@ -32,9 +32,10 @@ typedef struct
 	Table *tables;
 } Database;
 
+char *create_return_string(Table *table);
 char *read_fields(char ***fields, int *num_fields, const char *start);
-void execute_statement(Database *database, const char *statement);
-void select_statement(Database *database, const char *statement);
+char *execute_statement(Database *database, const char *statement);
+char *select_statement(Database *database, const char *statement);
 void free_database(Database *database);
 char *get_field_value(char **field, const char *start, const char *delim);
 void read_table(Table *table, const char *table_def, FILE *file);
@@ -67,26 +68,27 @@ int main(int argc, char *argv[])
 	char *line = NULL;
 	size_t line_size = 0;
 	int chars_read = getline(&line, &line_size, stdin);
-	execute_statement(&database, line);
+	char *output = execute_statement(&database, line);
+	printf("%s\nstrlen = %d", output, strlen(output));
+	free(output);
 
 	free_database(&database);
 
 	return 0;
 }
 
-void execute_statement(Database *database, const char *statement)
-{
-	
+char *execute_statement(Database *database, const char *statement)
+{	
 	char *type;
 	char *begin_next = get_field_value(&type, statement, " ");
 
 	if (strcmp(type, "SELECT") == 0)
 	{
-		select_statement(database, begin_next);
+		return select_statement(database, begin_next);
 	}
 }
 
-void select_statement(Database *database, const char *statement)
+char *select_statement(Database *database, const char *statement)
 {
 	char **fields = NULL;
 	int num_fields = 0;
@@ -95,10 +97,53 @@ void select_statement(Database *database, const char *statement)
 	if (begin_next == NULL)
 		return;
 	
-	printf("%s", begin_next);
 	char *from;
 	begin_next = get_field_value(&from, begin_next, " ");
-	//if (
+	if (strcmp(from, "FROM") != 0)
+	{
+		printf("That is not a valid SELECT statement.\n");
+		return;
+	}
+
+	char *table, *where = NULL;
+	char *tmp = get_field_value(&table, begin_next, " ");
+	if (tmp == NULL)
+	{
+		begin_next = get_field_value(&table, begin_next, "\n"); 
+	}
+	else
+	{
+		begin_next = tmp;
+	}
+
+	char *ret_string;
+	int i;
+	for (i = 0; i < database->num_tables; i++)
+	{
+		if (strcmp(database->tables[i].name, table) == 0)
+		{
+			return create_return_string(&database->tables[i]);
+		}
+	}
+}
+
+char *create_return_string(Table *table)
+{
+	char *return_string = (char *) malloc(1 * sizeof(char));
+	*return_string = '\0';
+	int curr_length = 1;
+	int i;
+	for (i = 0; i < table->num_fields; i++)
+	{
+		curr_length = strlen(table->fields[i].name) + curr_length + 2;
+		return_string = (char *) realloc(return_string, curr_length * sizeof(char));
+		strcat(return_string, table->fields[i].name);
+		strcat(return_string, ", ");
+	}
+	printf("%d", curr_length);
+	return_string[curr_length - 3] = '\0';
+	for (i = 0; i < table->num_rows; i++);
+	return return_string;
 }
 
 char *read_fields(char ***fields, int *num_fields, const char *start)
@@ -137,6 +182,7 @@ void free_database(Database *database)
 		free(database->tables[i].rows);
 	}
 	free(database->tables);
+	free(database->name);
 }
 
 int read_database(Database *database, const char *db_name)
@@ -177,9 +223,15 @@ int read_database(Database *database, const char *db_name)
 	fclose(db_file);
 }
 
+//Gets the value 
 char *get_field_value(char **field, const char *start, const char *delim)
 {
 	char *end = strstr(start, delim);
+	if (end == NULL)
+	{
+		return NULL;
+	}
+
 	*end = '\0';
 	int length = strlen(start);
 	*field = (char *) malloc((length + 1) * sizeof(char));
