@@ -68,10 +68,15 @@ int main(int argc, char *argv[])
 	char *line = NULL;
 	size_t line_size = 0;
 	int chars_read = getline(&line, &line_size, stdin);
-	char *output = execute_statement(&database, line);
-	printf("%s\nstrlen = %d", output, strlen(output));
-	free(output);
+	while (strcmp(line, "QUIT\n") != 0)
+	{
+		char *output = execute_statement(&database, line);
+		printf("%s\n", output);
+		free(output);
+		chars_read = getline(&line, &line_size, stdin);
+	}
 
+	free(line);
 	free_database(&database);
 
 	return 0;
@@ -85,6 +90,10 @@ char *execute_statement(Database *database, const char *statement)
 	if (strcmp(type, "SELECT") == 0)
 	{
 		return select_statement(database, begin_next);
+	}
+	else
+	{
+		return strdup("Invalid statement.");
 	}
 }
 
@@ -166,7 +175,7 @@ char *create_return_string(Table *table)
 	return return_string;
 }
 
-char *read_fields(char ***fields, int *num_fields, const char *start)
+char *read_fields(char ***fields, int *num_fields, char const *start)
 {
 	if (start[0] == '*')
 	{
@@ -240,6 +249,7 @@ int read_database(Database *database, const char *db_name)
 		chars_read = getline(&line, &line_size, db_file);
 	}	
 
+	free(line);
 	fclose(db_file);
 }
 
