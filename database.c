@@ -35,7 +35,7 @@ typedef struct
 
 void print_database(Database database);
 char *create_return_string(Table *table);
-char *read_fields(char ***fields, int *num_fields, const char *start);
+char *get_fields(char ***fields, int *num_fields, const char *start);
 char *execute_statement(Database *database, const char *statement);
 char *select_statement(Database *database, const char *statement);
 void free_database(Database *database);
@@ -105,7 +105,7 @@ char *select_statement(Database *database, const char *statement)
 {
 	char **fields = NULL;
 	int num_fields = 0;
-	char *begin_next = read_fields(&fields, &num_fields, statement);
+	char *begin_next = get_fields(&fields, &num_fields, statement);
 	
 	if (begin_next == NULL)
 		return;
@@ -114,8 +114,7 @@ char *select_statement(Database *database, const char *statement)
 	begin_next = get_field_value(&from, begin_next, " ");
 	if (strcmp(from, "FROM") != 0)
 	{
-		printf("That is not a valid SELECT statement.\n");
-		return;
+		return strdup("That is not a valid SELECT statement.\n");
 	}
 
 	char *table, *where = NULL;
@@ -185,7 +184,7 @@ char *create_return_string(Table *table)
 	return return_string;
 }
 
-char *read_fields(char ***fields, int *num_fields, char const *start)
+char *get_fields(char ***fields, int *num_fields, char const *start)
 {
 	if (start[0] == '*')
 	{
