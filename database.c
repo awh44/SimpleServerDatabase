@@ -3,7 +3,8 @@
 #include <string.h>
 
 #define NAME_START 14
-#define NUM_TABS 3 
+#define NUM_TABS 3
+#define TABLE_DOES_NOT_EXIST_LENGTH 28
 
 typedef struct
 {
@@ -32,6 +33,7 @@ typedef struct
 	Table *tables;
 } Database;
 
+void print_database(Database database);
 char *create_return_string(Table *table);
 char *read_fields(char ***fields, int *num_fields, const char *start);
 char *execute_statement(Database *database, const char *statement);
@@ -45,25 +47,7 @@ int main(int argc, char *argv[])
 {
 	Database database;
 	read_database(&database, "test_db.xml");
-
-	/*
-	int i;
-	for (i = 0; i < database.num_tables; i++)
-	{
-		printf("Table: %s\n", database.tables[i].name);
-		int j;
-		for (j = 0; j < database.tables[i].num_rows; j++)
-		{
-			printf("\tRow %d:\n", j);
-			int k;
-			for (k = 0; k < database.tables[i].num_fields; k++)
-			{
-				printf("\t\t%s = %s", database.tables[i].fields[k].name, database.tables[i].rows[j].values[k]);
-				printf(" (Type %s)\n", database.tables[i].fields[k].type);
-			}
-		}
-	}
-	*/
+	print_database(database);
 
 	char *line = NULL;
 	size_t line_size = 0;
@@ -80,6 +64,26 @@ int main(int argc, char *argv[])
 	free_database(&database);
 
 	return 0;
+}
+
+void print_database(Database database)
+{
+	int i;
+	for (i = 0; i < database.num_tables; i++)
+	{
+		printf("Table: %s\n", database.tables[i].name);
+		int j;
+		for (j = 0; j < database.tables[i].num_rows; j++)
+		{
+			printf("\tRow %d:\n", j);
+			int k;
+			for (k = 0; k < database.tables[i].num_fields; k++)
+			{
+				printf("\t\t%s = %s", database.tables[i].fields[k].name, database.tables[i].rows[j].values[k]);
+				printf(" (Type %s)\n", database.tables[i].fields[k].type);
+			}
+		}
+	}
 }
 
 char *execute_statement(Database *database, const char *statement)
@@ -115,17 +119,19 @@ char *select_statement(Database *database, const char *statement)
 	}
 
 	char *table, *where = NULL;
-	char *tmp = get_field_value(&table, begin_next, " ");
-	if (tmp == NULL)
+	char *temp = get_field_value(&table, begin_next, " ");
+	//if there is no space, there must not be a WHERE clause,
+	//so search instead for the end of the line to get the value for
+	//table
+	if (temp == NULL)
 	{
 		begin_next = get_field_value(&table, begin_next, "\n"); 
 	}
 	else
 	{
-		begin_next = tmp;
+		begin_next = get_field_value(&where, temp, "\n");
 	}
 
-	char *ret_string;
 	int i;
 	for (i = 0; i < database->num_tables; i++)
 	{
@@ -134,6 +140,10 @@ char *select_statement(Database *database, const char *statement)
 			return create_return_string(&database->tables[i]);
 		}
 	}
+
+	char *return_string = (char *) malloc(TABLE_DOES_NOT_EXIST_LENGTH * sizeof(char));
+	strcpy(return_string, "That table does not exist.\n");
+	return return_string;
 }
 
 char *create_return_string(Table *table)
@@ -247,7 +257,8 @@ int read_database(Database *database, const char *db_name)
 		database->tables = realloc(database->tables, database->num_tables * sizeof(Table));
 		read_table(&database->tables[database->num_tables - 1], line, db_file);
 		chars_read = getline(&line, &line_size, db_file);
-	}	
+	}
+	printf("Number of tables = %d", database->num_tables);	
 
 	free(line);
 	fclose(db_file);
