@@ -192,6 +192,33 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 		*num_fields = 0;
 		return start + 2;
 	}
+
+	printf("before getting it\n");
+	char *curr_field;
+	char *begin_next = get_field_value(&curr_field, start, ",");
+	printf("after getting it\n");
+	while (begin_next)
+	{
+		printf("begin_next = %d\n", begin_next);
+		begin_next++;
+		printf("curr_field = %s\n", curr_field);
+		(*num_fields)++;
+		printf("*num_fields = %d\n", *num_fields);
+		*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
+		(*fields)[*num_fields - 1] = curr_field;
+		printf("(*fields)[num_fields - 1] = %s\n", (*fields)[*num_fields - 1]);
+		begin_next = get_field_value(&curr_field, begin_next, ",");
+	}
+
+	printf("out of loop...\n");
+	begin_next = get_field_value(&curr_field, begin_next, " ");
+	printf("got field value...\n");
+	(*num_fields)++;
+	*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
+	printf("Realloced...\n");
+	(*fields)[*num_fields - 1] = curr_field;
+	printf("returning...\n");
+	return begin_next;
 }
 
 void free_database(Database *database)
