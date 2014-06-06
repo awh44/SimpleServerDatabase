@@ -107,8 +107,13 @@ char *select_statement(Database *database, const char *statement)
 	int num_fields = 0;
 	char *begin_next = get_fields(&fields, &num_fields, statement);
 
-	if ((begin_next == NULL) || (fields == NULL))
+	if ((begin_next == NULL) || (fields != NULL))
 	{
+		int i;
+		for (i = 0; i < num_fields; i++)
+		{
+			printf("%s\n", fields[i]);
+		}
 		return strdup("Early return from select_statement\n");
 	}
 
@@ -193,62 +198,46 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 		return start + 2;
 	}
 
-	/*
-	printf("before getting it\n");
 	char *curr_field;
 	char *begin_next = get_field_value(&curr_field, start, ",");
-	printf("after getting it\n");
-	while (begin_next)
-	{
-		printf("begin_next = %d\n", begin_next);
-		begin_next++;
-		printf("curr_field = %s\n", curr_field);
-		(*num_fields)++;
-		printf("*num_fields = %d\n", *num_fields);
-		*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
-		(*fields)[*num_fields - 1] = curr_field;
-		printf("(*fields)[num_fields - 1] = %s\n", (*fields)[*num_fields - 1]);
-		begin_next = get_field_value(&curr_field, begin_next, ",");
-	}
-	*/
-
-	char *curr_field;
-	char *begin_next = get_field_value(&curr_field, start, ",");	
-
-	printf("curr_field = %s\nbegin_next = %s\n", curr_field, begin_next);
-
-	while (begin_next)
-	{
-		begin_next++;
-		free(curr_field);
-		curr_field = NULL;
-		begin_next = get_field_value(&curr_field, begin_next, ",");
-		curr_field && printf("curr_field = %s\n", curr_field);
-	}
-
-	printf("Out of the while loop\n");
 	
+	if (begin_next == NULL)
+	{
+		return NULL;
+	}
 
-/*	while (begin_next != NULL)
+	(*num_fields)++;
+	*fields = (char **) malloc(sizeof(char *));
+	(*fields)[0] =	curr_field;
+
+	int cont = 1;
+	while (cont)
 	{
 		begin_next++;
-		free(curr_field);
-		begin_next = get_field_value(&curr_field, begin_next, ",");
-		printf("%s", curr_field);
+		char *temp = get_field_value(&curr_field, begin_next, ",");
+		if (temp != NULL)
+		{
+			begin_next = temp;
+			(*num_fields)++;
+			*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
+			(*fields)[*num_fields - 1] = curr_field;
+		}
+		else
+		{
+			cont = 0;
+		}
 	}
-*/	
 
-	/*
-	printf("out of loop...\n");
-	begin_next++;
 	begin_next = get_field_value(&curr_field, begin_next, " ");
-	printf("got field value...\n");
+	if (begin_next == NULL)
+	{
+		return NULL;
+	}
+
 	(*num_fields)++;
 	*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
-	printf("Realloced...\n");
 	(*fields)[*num_fields - 1] = curr_field;
-	printf("returning...\n");
-	*/	
+
 	return begin_next;
 }
 
@@ -316,7 +305,6 @@ int read_database(Database *database, const char *db_name)
 		read_table(&database->tables[database->num_tables - 1], line, db_file);
 		chars_read = getline(&line, &line_size, db_file);
 	}
-	printf("Number of tables = %d", database->num_tables);	
 
 	free(line);
 	fclose(db_file);
