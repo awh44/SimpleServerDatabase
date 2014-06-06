@@ -4,7 +4,6 @@
 
 #define NAME_START 14
 #define NUM_TABS 3
-#define TABLE_DOES_NOT_EXIST_LENGTH 28
 
 typedef struct
 {
@@ -48,6 +47,7 @@ int main(int argc, char *argv[])
 	Database database;
 	read_database(&database, "test_db.xml");
 	print_database(database);
+	printf("\n");
 
 	char *line = NULL;
 	size_t line_size = 0;
@@ -106,10 +106,12 @@ char *select_statement(Database *database, const char *statement)
 	char **fields = NULL;
 	int num_fields = 0;
 	char *begin_next = get_fields(&fields, &num_fields, statement);
-	
-	if (begin_next == NULL)
-		return;
-	
+
+	if ((begin_next == NULL) || (fields == NULL))
+	{
+		return strdup("Early return from select_statement\n");
+	}
+
 	char *from;
 	begin_next = get_field_value(&from, begin_next, " ");
 	if (strcmp(from, "FROM") != 0)
@@ -140,9 +142,7 @@ char *select_statement(Database *database, const char *statement)
 		}
 	}
 
-	char *return_string = (char *) malloc(TABLE_DOES_NOT_EXIST_LENGTH * sizeof(char));
-	strcpy(return_string, "That table does not exist.\n");
-	return return_string;
+	return strdup("That table does not exist.\n");
 }
 
 char *create_return_string(Table *table)
@@ -193,6 +193,7 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 		return start + 2;
 	}
 
+	/*
 	printf("before getting it\n");
 	char *curr_field;
 	char *begin_next = get_field_value(&curr_field, start, ",");
@@ -209,8 +210,37 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 		printf("(*fields)[num_fields - 1] = %s\n", (*fields)[*num_fields - 1]);
 		begin_next = get_field_value(&curr_field, begin_next, ",");
 	}
+	*/
 
+	char *curr_field;
+	char *begin_next = get_field_value(&curr_field, start, ",");	
+
+	printf("curr_field = %s\nbegin_next = %s\n", curr_field, begin_next);
+
+	while (begin_next)
+	{
+		begin_next++;
+		free(curr_field);
+		curr_field = NULL;
+		begin_next = get_field_value(&curr_field, begin_next, ",");
+		curr_field && printf("curr_field = %s\n", curr_field);
+	}
+
+	printf("Out of the while loop\n");
+	
+
+/*	while (begin_next != NULL)
+	{
+		begin_next++;
+		free(curr_field);
+		begin_next = get_field_value(&curr_field, begin_next, ",");
+		printf("%s", curr_field);
+	}
+*/	
+
+	/*
 	printf("out of loop...\n");
+	begin_next++;
 	begin_next = get_field_value(&curr_field, begin_next, " ");
 	printf("got field value...\n");
 	(*num_fields)++;
@@ -218,6 +248,7 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 	printf("Realloced...\n");
 	(*fields)[*num_fields - 1] = curr_field;
 	printf("returning...\n");
+	*/	
 	return begin_next;
 }
 
@@ -271,8 +302,9 @@ int read_database(Database *database, const char *db_name)
 
 	//now that it is known that failure won't occur, assign the
 	//database values
-	database->name = (char *) malloc((strlen(db_name) + 1) * sizeof(char));
-	strcpy(database->name, db_name);
+	//database->name = (char *) malloc((strlen(db_name) + 1) * sizeof(char));
+	//strcpy(database->name, db_name);
+	database->name = strdup(db_name);
 	database->num_tables = 0;
 	database->tables = NULL;
 
@@ -300,9 +332,11 @@ char *get_field_value(char **field, const char *start, const char *delim)
 	}
 
 	*end = '\0';
+	*field = strdup(start);
+	/*
 	int length = strlen(start);
 	*field = (char *) malloc((length + 1) * sizeof(char));
-	strcpy(*field, start);
+	strcpy(*field, start);*/
 	*end = *delim;
 	return end + 1;
 }
@@ -337,9 +371,10 @@ void read_table(Table *table, const char *table_def, FILE *file)
 		{
 			chars_read = getline(&line, &line_size, file);
 			line += NUM_TABS;
-			table->rows[table->num_rows - 1].values[i] = (char *) malloc(strlen(line) * sizeof(char));
+			//table->rows[table->num_rows - 1].values[i] = (char *) malloc(strlen(line) * sizeof(char));
 			line[strlen(line) - 1] = '\0';
-			strcpy(table->rows[table->num_rows - 1].values[i], line);
+			table->rows[table->num_rows - 1].values[i] = strdup(line);
+			//strcpy(table->rows[table->num_rows - 1].values[i], line);
 		}
 		//get rid of the current row's closing </row>
 		chars_read = getline(&line, &line_size, file);
