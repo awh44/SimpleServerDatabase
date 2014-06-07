@@ -1,4 +1,4 @@
 run: compile
-	./database.out
+	./o_database.out
 compile:
-	gcc database.c -odatabase.out
+	gcc database.c -oo_database.out
