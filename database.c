@@ -33,7 +33,7 @@ typedef struct
 } Database;
 
 void print_database(Database database);
-char *create_return_string(Table *table);
+char *create_return_string(Table *table, int *field_indices, int arr_length);
 char *get_fields(char ***fields, int *num_fields, const char *start);
 char *execute_statement(Database *database, const char *statement);
 char *select_statement(Database *database, const char *statement);
@@ -41,6 +41,8 @@ void free_database(Database *database);
 char *get_field_value(char **field, const char *start, const char *delim);
 void read_table(Table *table, const char *table_def, FILE *file);
 int read_database(Database *database, const char *db_name);
+int get_index_for_field(Table *table, char *field);
+void free_fields(char **fields, int num_fields);
 
 int main(int argc, char *argv[])
 {
@@ -97,12 +99,13 @@ char *execute_statement(Database *database, const char *statement)
 	}
 	else
 	{
-		return strdup("Invalid statement.");
+		return strdup("Invalid statement.\n");
 	}
 }
 
 char *select_statement(Database *database, const char *statement)
 {
+	int i;
 	char **fields = NULL;
 	int num_fields = 0;
 	char *begin_next = get_fields(&fields, &num_fields, statement);
@@ -112,21 +115,16 @@ char *select_statement(Database *database, const char *statement)
 		return strdup("The fields clause of the SELECT statement was invalid.\n");	
 	}
 
-	if (fields != NULL)
-	{
-		int i;
-		for (i = 0; i < num_fields; i++)
-		{
-			printf("%s\n", fields[i]);
-		}
-	}
-
 	char *from;
 	begin_next = get_field_value(&from, begin_next, " ");
 	if (strcmp(from, "FROM") != 0)
 	{
-		return strdup("That is not a valid SELECT statement.\n");
+		free(from);
+		free_fields(fields, num_fields);
+		free(fields);
+		return strdup("Use 'FROM' to indicate from which table to SELECT.\n");
 	}
+	free(from);
 
 	char *table, *where = NULL;
 	char *temp = get_field_value(&table, begin_next, " ");
@@ -142,27 +140,80 @@ char *select_statement(Database *database, const char *statement)
 		begin_next = get_field_value(&where, temp, "\n");
 	}
 
-	int i;
+	int table_index = -1;
 	for (i = 0; i < database->num_tables; i++)
 	{
 		if (strcmp(database->tables[i].name, table) == 0)
 		{
-			return create_return_string(&database->tables[i]);
+			table_index = i;
+		}
+	}
+	free(table);
+
+	if (table_index == -1)
+	{
+		free_fields(fields, num_fields);
+		free(fields);
+		return strdup("That table does not exist.\n");
+	}
+
+	int *field_indices;
+	int arr_size;
+	if (fields == NULL)
+	{
+		arr_size = database->tables[table_index].num_fields;
+		field_indices = (int *) malloc(arr_size * sizeof(int));
+		for (i = 0; i < arr_size; i++)
+		{
+			field_indices[i] = i;
+		}
+	}
+	else
+	{
+		arr_size = num_fields;
+		field_indices = (int *) malloc(arr_size * sizeof(int));
+		for (i = 0; i < num_fields; i++)
+		{
+			field_indices[i] = get_index_for_field(&database->tables[table_index], fields[i]);
+			if (field_indices[i] < 0)
+			{
+				free_fields(fields, num_fields);
+				free(fields);
+				free(field_indices);
+				return strdup("Invalid field in the SELECT clause.\n");
+			}
 		}
 	}
 
-	return strdup("That table does not exist.\n");
+	//return create_return_string(&database->tables[table_index], field_indices, arr_size);
+	///*
+	char *retString = create_return_string(&database->tables[table_index], field_indices, arr_size);
+	free_fields(fields, num_fields);
+	free(fields);
+	free(field_indices);
+
+	return retString;
 }
 
-char *create_return_string(Table *table)
+void free_fields(char **fields, int num_fields)
+{
+	int i;
+	for (i = 0; i < num_fields; i++)
+	{
+		free(fields[i]);
+	}
+}
+
+char *create_return_string(Table *table, int *field_indices, int arr_length)
 {
 	char *return_string = (char *) malloc(1 * sizeof(char));
 	*return_string = '\0';
 	int curr_length = 1;
 	int i;
-	for (i = 0; i < table->num_fields; i++)
+	for (i = 0; i < arr_length; i++)
 	{
-		curr_length = strlen(table->fields[i].name) + curr_length + 2;
+		int curr_index = field_indices[i];
+		curr_length = strlen(table->fields[curr_index].name) + curr_length + 2;
 		//I realize this is terribly inefficient and should probably use the
 		//convention of resizing the array to twice its size to accomodate the
 		//new data, as needed; that optimization will be added later
@@ -171,26 +222,41 @@ char *create_return_string(Table *table)
 		//joelonsoftware on how strcat scales awfully, because of its need to 
 		//reach the end of the initial string each time; should probably
 		//improve and optimize this later as well
-		strcat(return_string, table->fields[i].name);
+		strcat(return_string, table->fields[curr_index].name);
 		strcat(return_string, ", ");
 	}
 	//return_string now has a single extra character
 	return_string[curr_length - 3] = '\n';
 	return_string[curr_length - 2] = '\0';
+	
 	for (i = 0; i < table->num_rows; i++)
 	{
 		int j;
-		for (j = 0; j < table->num_fields; j++)
+		for (j = 0; j < arr_length; j++)
 		{
-			curr_length = strlen(table->rows[i].values[j]) + curr_length + 2;
+			int curr_index = field_indices[j];
+			curr_length = strlen(table->rows[i].values[curr_index]) + curr_length + 2;
 			return_string = (char *) realloc(return_string, curr_length * sizeof(char));
-			strcat(return_string, table->rows[i].values[j]);
+			strcat(return_string, table->rows[i].values[curr_index]);
 			strcat(return_string, ", ");
 		}
 		return_string[strlen(return_string) - 2] = '\n';
 		return_string[strlen(return_string) - 1] = '\0';
 	}
 	return return_string;
+}
+
+int get_index_for_field(Table *table, char *field)
+{
+	int i;
+	for (i = 0; i < table->num_fields; i++)
+	{
+		if (strcmp(table->fields[i].name, field) == 0)
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 char *get_fields(char ***fields, int *num_fields, char const *start)
