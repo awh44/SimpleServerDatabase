@@ -107,14 +107,18 @@ char *select_statement(Database *database, const char *statement)
 	int num_fields = 0;
 	char *begin_next = get_fields(&fields, &num_fields, statement);
 
-	if ((begin_next == NULL) || (fields != NULL))
+	if (begin_next == NULL)
+	{
+		return strdup("The fields clause of the SELECT statement was invalid.\n");	
+	}
+
+	if (fields != NULL)
 	{
 		int i;
 		for (i = 0; i < num_fields; i++)
 		{
 			printf("%s\n", fields[i]);
 		}
-		return strdup("Early return from select_statement\n");
 	}
 
 	char *from;
@@ -198,35 +202,26 @@ char *get_fields(char ***fields, int *num_fields, char const *start)
 		return start + 2;
 	}
 
+	char *begin_next = start;
 	char *curr_field;
-	char *begin_next = get_field_value(&curr_field, start, ",");
-	
-	if (begin_next == NULL)
-	{
-		return NULL;
-	}
-
-	(*num_fields)++;
-	*fields = (char **) malloc(sizeof(char *));
-	(*fields)[0] =	curr_field;
-
 	int cont = 1;
-	while (cont)
+	do
 	{
-		begin_next++;
 		char *temp = get_field_value(&curr_field, begin_next, ",");
-		if (temp != NULL)
+		if (temp == NULL)
+		{
+			cont = 0;
+		}
+		else
 		{
 			begin_next = temp;
 			(*num_fields)++;
 			*fields = (char **) realloc(*fields, *num_fields * sizeof(char *));
 			(*fields)[*num_fields - 1] = curr_field;
+			begin_next++;
 		}
-		else
-		{
-			cont = 0;
-		}
-	}
+		
+	} while (cont);
 
 	begin_next = get_field_value(&curr_field, begin_next, " ");
 	if (begin_next == NULL)
